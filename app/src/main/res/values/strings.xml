@@ -2,5 +2,10 @@
     <string name="app_name">mpmprojcet2</string>
     <string name="errorNull">لطفا فیلد را کامل کنید</string>
     <string name="codeInput">کد را وارد کنید</string>
-    <string name="nameInput">نام را وارد کنید</string>
+    <string name="nameInput">شماره تلفن را وارد کنید</string>
+    <string name="reciveCode">کد شما:999874</string>
+    <string name="nullApp">شماتاکنون برنامه به کسی پیشنهاد نداده اید</string>
+    <string name="showApp">مشاهده همه اعلان ها</string>
+    <string name="nullAppstar">شما پیشنهادی از دوستانتان ندارید</string>
+    <string name="showApp2">مشاهده همه پیشنهادات</string>
 </resources>

@@ -1,15 +1,25 @@
 package com.example.rezaei.mpmprojcet2.view;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Build;
+import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.PhoneNumberUtils;
+import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.QuickContactBadge;
+import android.widget.TextView;
 
 import com.example.rezaei.mpmprojcet2.R;
 
@@ -19,25 +29,40 @@ import java.lang.reflect.Method;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
+import spencerstudios.com.bungeelib.Bungee;
+
 public class LoginActivity extends AppCompatActivity {
 
     private EditText phone,code;
     private ImageView submit;
+    private TextView msg;
+    private Bitmap icon;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
         setComponent();
-        createFakeSms(this,"alireza","test");
+
     }
     private void setComponent(){
         phone=findViewById(R.id.phone);
         code=findViewById(R.id.code);
+        msg=findViewById(R.id.msg);
         submit=findViewById(R.id.submit);
+        notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+        icon = BitmapFactory.decodeResource(this.getResources(),
+                R.mipmap.ic_launcher);
+
+
         submit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                setDataForSimpleNotification();
+                if(phone.isEnabled())
                 getInfo();
+                else
+                    getInfoCode();
+
             }
         });
 
@@ -46,82 +71,113 @@ public class LoginActivity extends AppCompatActivity {
         if(phone.getText()!=null &&  phone.getText().toString().matches("09\\d\\d\\d\\d\\d\\d\\d\\d\\d")){
             phone.setEnabled(false);
             code.setVisibility(View.VISIBLE);
+            msg.setText(getString(R.string.reciveCode));
+
         }else
             phone.setError(getString(R.string.errorNull));
     }
+    private void getInfoCode(){
+        if(code.getText()!=null &&  code.getText().toString().matches("\\d\\d\\d\\d\\d\\d")){
 
-    private static void createFakeSms(Context context, String sender,
-                                      String body) {
-        byte[] pdu = null;
-        byte[] scBytes = PhoneNumberUtils
-                .networkPortionToCalledPartyBCD("0000000000");
-        byte[] senderBytes = PhoneNumberUtils
-                .networkPortionToCalledPartyBCD(sender);
-        int lsmcs = scBytes.length;
-        byte[] dateBytes = new byte[7];
-        Calendar calendar = new GregorianCalendar();
-        dateBytes[0] = reverseByte((byte) (calendar.get(Calendar.YEAR)));
-        dateBytes[1] = reverseByte((byte) (calendar.get(Calendar.MONTH) + 1));
-        dateBytes[2] = reverseByte((byte) (calendar.get(Calendar.DAY_OF_MONTH)));
-        dateBytes[3] = reverseByte((byte) (calendar.get(Calendar.HOUR_OF_DAY)));
-        dateBytes[4] = reverseByte((byte) (calendar.get(Calendar.MINUTE)));
-        dateBytes[5] = reverseByte((byte) (calendar.get(Calendar.SECOND)));
-        dateBytes[6] = reverseByte((byte) ((calendar.get(Calendar.ZONE_OFFSET) + calendar
-                .get(Calendar.DST_OFFSET)) / (60 * 1000 * 15)));
-        try {
-            ByteArrayOutputStream bo = new ByteArrayOutputStream();
-            bo.write(lsmcs);
-            bo.write(scBytes);
-            bo.write(0x04);
-            bo.write((byte) sender.length());
-            bo.write(senderBytes);
-            bo.write(0x00);
-            bo.write(0x00); // encoding: 0 for default 7bit
-            bo.write(dateBytes);
-            try {
-                String sReflectedClassName = "com.android.internal.telephony.GsmAlphabet";
-                Class cReflectedNFCExtras = Class.forName(sReflectedClassName);
-                Method stringToGsm7BitPacked = cReflectedNFCExtras.getMethod(
-                        "stringToGsm7BitPacked", new Class[] { String.class });
-                stringToGsm7BitPacked.setAccessible(true);
-                byte[] bodybytes = (byte[]) stringToGsm7BitPacked.invoke(null,
-                        body);
-                bo.write(bodybytes);
-            } catch (Exception e) {
-            }
-
-            pdu = bo.toByteArray();
-        } catch (IOException e) {
-        }
-//com.example.rezaei.mpmprojcet2
-        //com.android.mms
-        Intent intent = new Intent();
-        intent.setClassName("com.example.rezaei.mpmprojcet2",
-                "com.android.mms.transaction.SmsReceiverService");
-        intent.setAction("android.provider.Telephony.SMS_RECEIVED");
-        intent.putExtra("pdus", new Object[] { pdu });
-        intent.putExtra("format", "3gpp");
-        context.startService(intent);
+            Intent intent=new Intent(this, MainActivity.class);
+            this.startActivity(intent);
+            Bungee.zoom(LoginActivity.this);
+            finish();
+        }else
+            code.setError(getString(R.string.errorNull));
     }
 
-    private static byte reverseByte(byte b) {
-        return (byte) ((b & 0xF0) >> 4 | (b & 0x0F) << 4);
-    }
-    public static final SmsMessage[] getMessagesFromIntent(
-            Intent intent) {
-        Object[] messages = (Object[]) intent.getSerializableExtra("pdus");
-        byte[][] pduObjs = new byte[messages.length][];
 
-        for (int i = 0; i < messages.length; i++) {
-            pduObjs[i] = (byte[]) messages[i];
+    private NotificationManager notificationManager;
+    private NotificationCompat.Builder notificationBuilder;
+    private void sendNotification() {
+        Intent notificationIntent = new Intent(this, LoginActivity.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+         notificationBuilder.setContentIntent(contentIntent);
+        Notification notification = notificationBuilder.build();
+        notification.flags |= Notification.FLAG_AUTO_CANCEL;
+        notification.defaults |= Notification.DEFAULT_SOUND;
+     //   currentNotificationID++;
+      //  int notificationId = currentNotificationID;
+        int notificationId = 2;
+        if (notificationId == Integer.MAX_VALUE - 1)
+            notificationId = 0;
+        notificationManager.notify(notificationId, notification);
+    }
+
+    private void setDataForSimpleNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "dsds";
+            String description = "DFASFASDF";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel("my_channel_01", name, importance);
+            channel.setDescription(description);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+            notificationBuilder= new NotificationCompat.Builder(this, "my_channel_01")
+                    .setSmallIcon(R.drawable.icon)
+                    .setContentTitle("My notification")
+                    .setContentText("Much longer text that cannot fit one line...")
+                    .setStyle(new NotificationCompat.BigTextStyle()
+                            .bigText("Much longer text that cannot fit one line..."))
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT);
         }
-        byte[][] pdus = new byte[pduObjs.length][];
-        int pduCount = pdus.length;
-        SmsMessage[] msgs = new SmsMessage[pduCount];
-        for (int i = 0; i < pduCount; i++) {
-            pdus[i] = pduObjs[i];
-            msgs[i] = SmsMessage.createFromPdu(pdus[i]);
+        sendNotification();
+    }
+    private void setDataForNotificationWithActionButton() {
+        notificationBuilder = new NotificationCompat.Builder(this)
+                .setSmallIcon(R.mipmap.ic_launcher)
+               // .setLargeIcon(icon)
+                .setContentTitle("alisdfasd")
+                .setStyle(new NotificationCompat.BigTextStyle().bigText("fadfa"))
+                .setContentText("fadsfa");
+        Intent answerIntent = new Intent(this, MainActivity.class);
+        answerIntent.setAction("Yes");
+        PendingIntent pendingIntentYes = PendingIntent.getActivity(this, 1, answerIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        notificationBuilder.addAction(R.drawable.icon, "Yes", pendingIntentYes);
+        answerIntent.setAction("No");
+        PendingIntent pendingIntentNo = PendingIntent.getActivity(this, 1, answerIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        notificationBuilder.addAction(R.drawable.icon, "No", pendingIntentNo);
+        sendNotification();
+    }
+   /* private void createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = getString(R.string.channel_name);
+            String description = getString(R.string.channel_description);
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
         }
-        return msgs;
+    }*/
+
+    private void createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "dsds";
+            String description = "DFASFASDF";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel("my_channel_01", name, importance);
+            channel.setDescription(description);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "my_channel_01")
+                    .setSmallIcon(R.drawable.icon)
+                    .setContentTitle("My notification")
+                    .setContentText("Much longer text that cannot fit one line...")
+                    .setStyle(new NotificationCompat.BigTextStyle()
+                            .bigText("Much longer text that cannot fit one line..."))
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+        }
     }
 }

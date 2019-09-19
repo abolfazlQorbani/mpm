@@ -21,9 +21,10 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'com.android.support:appcompat-v7:27.+'
+    implementation 'com.android.support:appcompat-v7:28.+'
     implementation 'com.android.support.constraint:constraint-layout:1.1.3'
     implementation 'com.github.Binary-Finery:Bungee:661aaa1e3e'
     implementation 'de.hdodenhof:circleimageview:2.2.0'
     implementation 'com.fujiyuu75:sequent:0.2.1'
+    implementation group: 'org.jsoup', name: 'jsoup', version: '1.8.3'
 }
